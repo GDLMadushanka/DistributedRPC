@@ -3,12 +3,12 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-
 package distributed;
+
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-    
+import java.util.Map;
 
 /**
  *
@@ -21,14 +21,15 @@ public class MessageDecoder extends RequestHandler {
     private final RoutingTable table;
     private final CommunicationProtocol protocol;
     PerformaceParameters pp = PerformaceParameters.getInstance();
-    long StartTime=0l;
-    long EndTime=0l;
-
+    long StartTime = 0l;
+    long EndTime = 0l;
+    FileTable fileTable;
 
     public MessageDecoder(ControlPanel mainWindow) {
         super(mainWindow);
         table = RoutingTable.getInstance();
         protocol = CommunicationProtocol.getInstance();
+        fileTable = FileTable.getInstance();
     }
 
     /**
@@ -77,7 +78,7 @@ public class MessageDecoder extends RequestHandler {
 
         if (neighboursCount > 0 && neighboursCount <= DistributedConstants.numberOfneighbours) {
             for (int i = 0; i < neighboursCount; i++) {
-                table.addNeighBour(buffer[3 + 2 * i], Integer.parseInt(buffer[4 + 2 * i]));
+                table.addNeighBour(new NodeResource(buffer[3 + 2 * i], Integer.parseInt(buffer[4 + 2 * i])));
                 updateRoutingTable(table, mainWindow);
             }
         }
@@ -98,39 +99,30 @@ public class MessageDecoder extends RequestHandler {
              */
         } else if (buffer[2].equals("0")) {
             System.out.println("Unregistered");
-
-            Iterator<String> iterator = table.getNeighbouringTable().keySet().iterator();
-            String tempKey;
-            while (iterator.hasNext()) {
-                tempKey = iterator.next();
-                if (table.getNeighbouringTable().get(tempKey).equals(DistributedConstants.connected)) {
-                    String[] temp = tempKey.split(":");
-                    String fileRequestMsg = protocol.leave(RequestHandler.clientIP, RequestHandler.socket.getLocalPort());
-                    SendMessage(fileRequestMsg, temp[0], Integer.parseInt(temp[1]));
-                }
+            List<NodeResource> list = table.getNodeList();
+//            Iterator<String> iterator = table.getNeighbouringTable().keySet().iterator();
+            for (int i = 0; i < 10; i++) {
+                String leaveRequestMessage = protocol.leave(RequestHandler.clientIP, RequestHandler.socket.getLocalPort());
+                SendMessage(leaveRequestMessage, list.get(i).getIp(), list.get(i).getPort());
             }
-
         }
     }
 
     /**
-     * method will handle the response if the join request
+     * method will handle the response for the join request
      *
      * @param message
      */
     private void joinResponse(String message) {
-        String receivingEndState = table.getNeighbouringTable().get(this.receivedIp + ":" + this.receivedPort);
+//        String receivingEndState = table.getNeighbouringTable().get(this.receivedIp + ":" + this.receivedPort);
         String buffer[] = message.split(" ");
-        if (receivingEndState != null) {
-            if (buffer[2].equals("9999")) {
-                /*
+        if (buffer[2].equals("9999")) {
+            /*
                 solution has to be a group decision
-                 */
-            } else if (buffer[2].equals("0")) {
-                receivingEndState = DistributedConstants.connected;
-                table.updateNeighbourState(this.receivedIp, this.receivedPort, receivingEndState);
-                this.updateRoutingTable(table, mainWindow);
-            }
+             */
+        } else if (buffer[2].equals("0")) {
+            table.addNeighBour(new NodeResource(this.receivedIp, this.receivedPort));
+            this.updateRoutingTable(table, mainWindow);
         }
     }
 
@@ -169,7 +161,7 @@ public class MessageDecoder extends RequestHandler {
                 mainWindow.getDisplaySearchResult().append(buffer[6 + i] + " ==> " + fileHostedNodeIP + ":" + fileHostedNodePort + "\n");
             }
         }
-        
+
     }
 
     /**
@@ -187,13 +179,12 @@ public class MessageDecoder extends RequestHandler {
         int portOfRequestedNode = Integer.parseInt(buffer[3]);
 
         if (ipOfRequestedNode.equals(this.receivedIp) && this.receivedPort == portOfRequestedNode) {
-            this.table.getNeighbouringTable().put(ipOfRequestedNode + ":" + portOfRequestedNode, DistributedConstants.connected);
+            this.table.addNeighBour(new NodeResource(ipOfRequestedNode, portOfRequestedNode));
             updateRoutingTable(table, mainWindow);
             responseMessage = protocol.joinResponse(0);
         } else {
             responseMessage = protocol.joinResponse(9999);
         }
-
         SendMessage(responseMessage, ipOfRequestedNode, portOfRequestedNode);
     }
 
@@ -211,7 +202,7 @@ public class MessageDecoder extends RequestHandler {
         int portOfRequestedNode = Integer.parseInt(buffer[3]);
 
         if (ipOfRequestedNode.equals(this.receivedIp) && this.receivedPort == portOfRequestedNode) {
-            this.table.removeNeighbour(ipOfRequestedNode, portOfRequestedNode);
+            this.table.removeNeighbour(new NodeResource(ipOfRequestedNode, portOfRequestedNode));
             updateRoutingTable(table, mainWindow);
             responseMessage = protocol.leaveResponse(0);
         } else {
@@ -230,7 +221,7 @@ public class MessageDecoder extends RequestHandler {
      * @throws Exception
      */
     private void handleSearchRequest(String message) throws Exception {
-        String buffer[] = message.split("'");
+        String buffer[] = message.split("\"");
         String buffer_1[] = message.split(" ");
         String ipOfRequestedNode = buffer_1[2];
         String fileName = buffer[1];
@@ -239,8 +230,11 @@ public class MessageDecoder extends RequestHandler {
         int hopCount = Integer.parseInt(buffer_1[buffer_1.length - 1]);
         String fileList = "";
         List<String> list;
-        if (hopCount <= DistributedConstants.defaultHops) {
-            String[] keywords = fileName.split("_");
+        Map<String, List<NodeResource>> tempMap;
+        if (hopCount > 0) {
+            hopCount--;
+//            String[] keywords = fileName.split("_");
+            tempMap = fileTable.searchFile(fileName);
             for (int i = 0; i < keywords.length; i++) {
                 list = table.getFileMap().get(keywords[i]);
                 for (int j = 0; j < list.size(); j++) {
@@ -251,7 +245,7 @@ public class MessageDecoder extends RequestHandler {
                     }
                 }
             }
-            hopCount++;
+
             String fileRequestMsg = protocol.searchFile(ipOfRequestedNode, portOfRequestedNode, hopCount, fileName);
             Iterator<String> iterator = table.getNeighbouringTable().keySet().iterator();
             String tempKey;

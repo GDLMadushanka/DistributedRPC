@@ -3,14 +3,15 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-
 package distributed;
+
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -57,7 +58,8 @@ public abstract class RequestHandler {
 
     /**
      * this method will be used for receive the data from the socket
-     * @return 
+     *
+     * @return
      */
     public DatagramPacket receiveMessage() {
         byte[] buffer = new byte[65536];
@@ -72,23 +74,21 @@ public abstract class RequestHandler {
 
     /**
      * this method will update the routing table indicated in the GUI
+     *
      * @param table
-     * @param mainWindow 
+     * @param mainWindow
      */
     public void updateRoutingTable(RoutingTable table, ControlPanel mainWindow) {
-        Map<String, String> neighbourTable = table.getNeighbouringTable();
-        Iterator<String> keySet = neighbourTable.keySet().iterator();
+        List<NodeResource> nodeList = table.getNodeList();
+
         int initialRowCount = mainWindow.getNeighbourTable().getRowCount();
         for (int i = 0; i < initialRowCount; i++) {
             mainWindow.getNeighbourTable().removeRow(0);
         }
 
-        while (keySet.hasNext()) {
-            String key = keySet.next();
-            if (!neighbourTable.get(key).equals(DistributedConstants.disconnected)) {
-                Object[] temp = {key, neighbourTable.get(key)};
-                mainWindow.getNeighbourTable().addRow(temp);
-            }
+        for (int i = 0; i < nodeList.size(); i++) {
+            Object[] temp = {nodeList.get(i).getIp(), nodeList.get(i).getPort()};
+            mainWindow.getNeighbourTable().addRow(temp);
         }
     }
 

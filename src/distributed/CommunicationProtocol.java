@@ -48,7 +48,7 @@ public class CommunicationProtocol {
     }
 
     public String searchFile(String IP, int port, int hopCount, String fileName) throws Exception {
-        String message = " SER " + IP + " " + port + " '" + fileName + "' ";
+        String message = " SER " + IP + " " + port + " \"" + fileName + "\" ";
         if(hopCount < 1)
             message+=hopCount;
         return validateMessage(message);

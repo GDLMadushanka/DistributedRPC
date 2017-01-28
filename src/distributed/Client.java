@@ -3,15 +3,19 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-
 package distributed;
+
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -24,7 +28,7 @@ public class Client extends RequestHandler {
     private String serverIp = "";
     private int serverPort;
     private String userName = "";
-
+    private FileTable fileTable;
     public MessageDecoder msgDecoder;
     private final CommunicationProtocol protocol;
     private final RoutingTable routingTable;
@@ -58,6 +62,8 @@ public class Client extends RequestHandler {
         msgDecoder = new MessageDecoder(mainWindow);
         protocol = CommunicationProtocol.getInstance();
         routingTable = RoutingTable.getInstance();
+        this.fileTable = FileTable.getInstance();
+
     }
 
     /**
@@ -93,35 +99,58 @@ public class Client extends RequestHandler {
      */
     public void searchFile(String fileName) throws Exception {
 
-        String tempKeywords[] = fileName.split(" ");
-        List<String> list;
-        String fileList = "";
-        for (int i = 0; i < tempKeywords.length; i++) {
-            list = routingTable.getFileMap().get(tempKeywords[i]);
-            if (list != null) {
-                for (int j = 0; j < list.size(); j++) {
-                    String tempFileName = list.get(j);
-                    if (!fileList.contains(tempFileName)) {
-                        fileList += tempFileName + " ";
-                        mainWindow.getDisplaySearchResult().append(tempFileName + " ==> " + RequestHandler.clientIP
-                                + ":" + RequestHandler.socket.getLocalPort() + "\n");
-                    }
-                }
+        List<NodeResource> list;
+
+        Map<String, List<NodeResource>> tempResults = SearchFileInsideClient(fileName);
+
+        if (tempResults != null) {
+            Set<String> tempFileSet = tempResults.keySet();
+            Iterator itr = tempFileSet.iterator();
+            while (itr.hasNext()) {
+                String tempfileName = (String) itr.next();
+                mainWindow.getDisplaySearchResult().append(tempfileName + " ==> " + RequestHandler.clientIP
+                        + ":" + RequestHandler.socket.getLocalPort() + "\n");
+            }
+        } else {
+            String tempMessage = protocol.searchFile(RequestHandler.clientIP, RequestHandler.socket.getLocalPort(), 0, fileName);
+            list = routingTable.getNodeList();
+//            Iterator<String> iterator = routingTable.getNeighbouringTable().keySet().iterator();
+            String tempKey;
+            for (int i = 0; i < list.size(); i++) {
+                SendMessage(tempMessage, list.get(i).getIp(), list.get(i).getPort());
             }
         }
 
-        String tempMessage = protocol.searchFile(RequestHandler.clientIP, RequestHandler.socket.getLocalPort(), 0, fileName);
-        Iterator<String> iterator = routingTable.getNeighbouringTable().keySet().iterator();
-        String tempKey;
+    }
 
-        while (iterator.hasNext()) {
-            tempKey = iterator.next();
-            if (routingTable.getNeighbouringTable().get(tempKey).equals(DistributedConstants.connected)) {
-                String[] temp = tempKey.split(":");
-                SendMessage(tempMessage, temp[0], Integer.parseInt(temp[1]));
+    /**
+     * this service search files inside my file list and return map
+     *
+     * @param fileName
+     * @return
+     */
+    public Map<String, List<NodeResource>> SearchFileInsideClient(String fileName) {
+        NodeResource node = new NodeResource();
+        node.setIp(RequestHandler.clientIP);
+        node.setPort(RequestHandler.socket.getLocalPort());
+        List<NodeResource> tempNodeList = new ArrayList<>();
+        tempNodeList.add(node);
+
+        Map<String, List<NodeResource>> tempMap;
+        tempMap = fileTable.searchFile(fileName);
+
+        List<String> tempList = fileTable.searchMyFileList(fileName);
+        if (tempList != null) {
+            tempMap = new HashMap<>();
+            for (int i = 0; i < tempList.size(); i++) {
+                tempMap.put(tempList.get(i), tempNodeList);
             }
+            return tempMap;
+        } else if (tempList == null && tempMap != null) {
+            return tempMap;
+        } else {
+            return null;
         }
-
     }
 
     /**
