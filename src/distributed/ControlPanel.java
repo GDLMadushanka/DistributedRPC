@@ -145,9 +145,6 @@ public class ControlPanel extends javax.swing.JFrame {
         jPanel4 = new javax.swing.JPanel();
         jScrollPane3 = new javax.swing.JScrollPane();
         myFileList = new javax.swing.JTextArea();
-        initializeFilesBtn = new javax.swing.JButton();
-        txtFileCount = new javax.swing.JTextField();
-        jLabel6 = new javax.swing.JLabel();
         jLabel7 = new javax.swing.JLabel();
         txtSearch = new javax.swing.JTextField();
         searchBtn = new javax.swing.JButton();
@@ -352,15 +349,6 @@ public class ControlPanel extends javax.swing.JFrame {
         myFileList.setRows(5);
         jScrollPane3.setViewportView(myFileList);
 
-        initializeFilesBtn.setText("Random Initialize");
-        initializeFilesBtn.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                initializeFilesBtnActionPerformed(evt);
-            }
-        });
-
-        jLabel6.setText("Number of files 3 to 5");
-
         jLabel7.setText("Search");
 
         searchBtn.setText("Search");
@@ -383,23 +371,13 @@ public class ControlPanel extends javax.swing.JFrame {
                         .addComponent(txtSearch, javax.swing.GroupLayout.PREFERRED_SIZE, 271, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                         .addComponent(searchBtn))
-                    .addComponent(jScrollPane3, javax.swing.GroupLayout.PREFERRED_SIZE, 418, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addGroup(jPanel4Layout.createSequentialGroup()
-                        .addComponent(jLabel6, javax.swing.GroupLayout.PREFERRED_SIZE, 187, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addGap(1, 1, 1)
-                        .addComponent(txtFileCount, javax.swing.GroupLayout.PREFERRED_SIZE, 47, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addGap(26, 26, 26)
-                        .addComponent(initializeFilesBtn)))
+                    .addComponent(jScrollPane3, javax.swing.GroupLayout.PREFERRED_SIZE, 418, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addContainerGap(13, Short.MAX_VALUE))
         );
         jPanel4Layout.setVerticalGroup(
             jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel4Layout.createSequentialGroup()
-                .addGroup(jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jLabel6)
-                    .addComponent(txtFileCount, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(initializeFilesBtn))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addGap(27, 27, 27)
                 .addGroup(jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(searchBtn)
                     .addComponent(txtSearch, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
@@ -428,7 +406,7 @@ public class ControlPanel extends javax.swing.JFrame {
         jPanel5Layout.setVerticalGroup(
             jPanel5Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel5Layout.createSequentialGroup()
-                .addComponent(jScrollPane4, javax.swing.GroupLayout.DEFAULT_SIZE, 119, Short.MAX_VALUE)
+                .addComponent(jScrollPane4, javax.swing.GroupLayout.DEFAULT_SIZE, 131, Short.MAX_VALUE)
                 .addContainerGap())
         );
 
@@ -481,26 +459,14 @@ public class ControlPanel extends javax.swing.JFrame {
         initializeAll();        // TODO add your handling code here:
     }//GEN-LAST:event_refreshBtnActionPerformed
 
-    private void initializeFilesBtnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_initializeFilesBtnActionPerformed
-        myFileList.setText("");
-        fileTable.getMyFilelist().clear();
-        int max = FileArr.length - 1;
-        int loop = Integer.parseInt(txtFileCount.getText());
-
-        for (int i = 0; i < loop; i++) {
-            int randomNum = rand.nextInt(max + 1);
-
-            fileTable.getMyFilelist().add(FileArr[randomNum]);
-            myFileList.append(FileArr[randomNum] + "\n");
-        }
-    }//GEN-LAST:event_initializeFilesBtnActionPerformed
-
+  
+    
+    
     private void joinBtnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_joinBtnActionPerformed
 
         int row = neighbourTable.getSelectedRow();
-        String address[] = neighbourTable.getModel().getValueAt(row, 0).toString().split(":");
-        String IP = address[0];
-        int port = Integer.parseInt(address[1]);
+        String IP = neighbourTable.getModel().getValueAt(row, 0).toString();
+        int port = Integer.parseInt(neighbourTable.getModel().getValueAt(row, 1).toString());
         try {
             client.SendJoinPacket(IP, port);
         } catch (Exception ex) {
@@ -508,6 +474,21 @@ public class ControlPanel extends javax.swing.JFrame {
         }
     }//GEN-LAST:event_joinBtnActionPerformed
 
+    
+    public void initializeFileList(){
+        myFileList.setText("");
+        fileTable.getMyFilelist().clear();
+        int max = FileArr.length - 1;
+        int loop = rand.nextInt(3) + 3;
+
+        for (int i = 0; i < loop; i++) {
+            int randomNum = rand.nextInt(max + 1);
+
+            fileTable.getMyFilelist().add(FileArr[randomNum]);
+            myFileList.append(FileArr[randomNum] + "\n");
+        }
+    }
+    
     private void registerBtnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_registerBtnActionPerformed
 
         String userName = txtName.getText();
@@ -595,13 +576,11 @@ public class ControlPanel extends javax.swing.JFrame {
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JComboBox<String> clientIPList;
     private javax.swing.JTextArea displaySearchResult;
-    private javax.swing.JButton initializeFilesBtn;
     private javax.swing.JLabel jLabel1;
     private javax.swing.JLabel jLabel2;
     private javax.swing.JLabel jLabel3;
     private javax.swing.JLabel jLabel4;
     private javax.swing.JLabel jLabel5;
-    private javax.swing.JLabel jLabel6;
     private javax.swing.JLabel jLabel7;
     private javax.swing.JLabel jLabel8;
     private javax.swing.JPanel jPanel1;
@@ -621,7 +600,6 @@ public class ControlPanel extends javax.swing.JFrame {
     private javax.swing.JButton registerBtn;
     private javax.swing.JButton searchBtn;
     private javax.swing.JTextField txtClientPort;
-    private javax.swing.JTextField txtFileCount;
     private javax.swing.JTextField txtName;
     private javax.swing.JTextField txtSearch;
     private javax.swing.JTextField txtServerIP;
