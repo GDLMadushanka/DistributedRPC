@@ -29,11 +29,12 @@ public class ControlPanel extends javax.swing.JFrame {
     long StartTime = 0l;
     long EndTime = 0l;
     //  DefaultTableModel model;
-    static String[] FileArr = new String[]{"Adventures_of_Tintin", "Jack_and_Jill", "Glee", "The_Vampire_Diarie", "King_Arthur", "Windows_XP", "Harry_Potter", "Kung_Fu_Panda", "Lady_Gaga", "Twilight", "Windows_8", "Mission_Impossible", "Turn_Up_The_Music", "Super_Mario", "American_Pickers", "Microsoft_Office_2010", "Happy_Feet", "Modern_Family", "American_Idol", "Hacking_for_Dummies"};
+    static String[] FileArr = new String[]{"Adventures of Tintin", "Jack and Jill", "Glee", "The Vampire Diarie", "King Arthur", "Windows XP", "Harry Potter", "Kung Fu Panda", "Lady Gaga", "Twilight", "Windows 8", "Mission Impossible", "Turn Up The Music", "Super Mario", "American Pickers", "Microsoft Office 2010", "Happy Feet", "Modern Family", "American Idol", "Hacking for Dummies"};
     Random rand = new Random(1);
     Client client;
     Timer timer;
     long lStartTime;
+    FileTable fileTable;
 
     class RemindTask extends TimerTask {
 
@@ -43,10 +44,11 @@ public class ControlPanel extends javax.swing.JFrame {
             displaySearchResult.setText("Search terminated due to timout");
         }
     }
-    public long stopTimer(){
+
+    public long stopTimer() {
         timer.cancel();
         timer.purge();
-        long lEndTime = System.nanoTime();		
+        long lEndTime = System.nanoTime();
         long output = lEndTime - lStartTime;
         return output;
     }
@@ -101,6 +103,12 @@ public class ControlPanel extends javax.swing.JFrame {
 //        model = (DefaultTableModel) neighbourTable.getModel();
         this.txtClientPort.setEditable(false);
         this.clientIPList.setEnabled(false);
+        fileTable = FileTable.getInstance();
+        try {
+            client.ping();
+        } catch (Exception ex) {
+            Logger.getLogger(ControlPanel.class.getName()).log(Level.SEVERE, null, ex);
+        }
 
     }
 
@@ -475,13 +483,14 @@ public class ControlPanel extends javax.swing.JFrame {
 
     private void initializeFilesBtnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_initializeFilesBtnActionPerformed
         myFileList.setText("");
-        RoutingTable.getInstance().getFileMap().clear();
+        fileTable.getMyFilelist().clear();
         int max = FileArr.length - 1;
         int loop = Integer.parseInt(txtFileCount.getText());
 
         for (int i = 0; i < loop; i++) {
             int randomNum = rand.nextInt(max + 1);
-            RoutingTable.getInstance().addFile(FileArr[randomNum]);
+
+            fileTable.getMyFilelist().add(FileArr[randomNum]);
             myFileList.append(FileArr[randomNum] + "\n");
         }
     }//GEN-LAST:event_initializeFilesBtnActionPerformed
@@ -522,7 +531,7 @@ public class ControlPanel extends javax.swing.JFrame {
         displaySearchResult.setText("");
         lStartTime = System.nanoTime();
         timer = new Timer();
-        timer.schedule(new RemindTask(), DistributedConstants.timout_sec*1000);
+        timer.schedule(new RemindTask(), DistributedConstants.timout_sec * 1000);
         if (searchKey != null && !searchKey.trim().isEmpty()) {
             try {
                 client.searchFile(searchKey);

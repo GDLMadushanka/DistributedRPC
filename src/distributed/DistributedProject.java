@@ -3,8 +3,8 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-
 package distributed;
+
 import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
@@ -21,11 +21,8 @@ public class DistributedProject {
      * @param args the command line arguments
      */
     public static void main(String[] args) {
-       ControlPanel cp = new ControlPanel();
-       cp.setVisible(true);
-       
-     
-       
+        ControlPanel cp = new ControlPanel();
+        cp.setVisible(true);
     }
-    
+
 }

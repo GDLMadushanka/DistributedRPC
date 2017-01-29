@@ -27,11 +27,11 @@ public class RoutingTable {
     private RoutingTable() {
     }
 
-    public void addNeighBour(NodeResource node) {
+    public synchronized void addNeighBour(NodeResource node) {
         this.nodeList.add(node);
     }
 
-    public boolean removeNeighbour(NodeResource node) {
+    public synchronized boolean removeNeighbour(NodeResource node) {
         for (int i = 0; i < nodeList.size(); i++) {
             if (nodeList.get(i).equals(node)) {
                 nodeList.remove(i);

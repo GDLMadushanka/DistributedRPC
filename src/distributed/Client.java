@@ -10,6 +10,8 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
+import java.net.SocketTimeoutException;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -24,7 +26,7 @@ import java.util.logging.Logger;
  * @author lahiru
  */
 public class Client extends RequestHandler {
-
+    
     private String serverIp = "";
     private int serverPort;
     private String userName = "";
@@ -32,38 +34,38 @@ public class Client extends RequestHandler {
     public MessageDecoder msgDecoder;
     private final CommunicationProtocol protocol;
     private final RoutingTable routingTable;
-
+    
     public String getUserName() {
         return userName;
     }
-
+    
     public void setUserName(String userName) {
         this.userName = userName;
     }
-
+    
     public String getServerIp() {
         return serverIp;
     }
-
+    
     public void setServerIp(String serverIp) {
         this.serverIp = serverIp;
     }
-
+    
     public int getServerPort() {
         return serverPort;
     }
-
+    
     public void setServerPort(int serverPort) {
         this.serverPort = serverPort;
     }
-
+    
     public Client(ControlPanel mainWindow) {
         super(mainWindow);
         msgDecoder = new MessageDecoder(mainWindow);
         protocol = CommunicationProtocol.getInstance();
         routingTable = RoutingTable.getInstance();
         this.fileTable = FileTable.getInstance();
-
+        
     }
 
     /**
@@ -87,7 +89,7 @@ public class Client extends RequestHandler {
     public void SendJoinPacket(String NodeIp, int nodePort) throws Exception {
         String tempMessage = protocol.join(RequestHandler.clientIP, RequestHandler.socket.getLocalPort());
         SendMessage(tempMessage, NodeIp, nodePort);
-
+        
     }
 
     /**
@@ -98,11 +100,11 @@ public class Client extends RequestHandler {
      * @throws Exception
      */
     public void searchFile(String fileName) throws Exception {
-
+        
         List<NodeResource> list;
-
+        
         Map<String, List<NodeResource>> tempResults = SearchFileInsideClient(fileName);
-
+        
         if (tempResults != null) {
             Set<String> tempFileSet = tempResults.keySet();
             Iterator itr = tempFileSet.iterator();
@@ -120,7 +122,7 @@ public class Client extends RequestHandler {
                 SendMessage(tempMessage, list.get(i).getIp(), list.get(i).getPort());
             }
         }
-
+        
     }
 
     /**
@@ -135,10 +137,10 @@ public class Client extends RequestHandler {
         node.setPort(RequestHandler.socket.getLocalPort());
         List<NodeResource> tempNodeList = new ArrayList<>();
         tempNodeList.add(node);
-
+        
         Map<String, List<NodeResource>> tempMap;
         tempMap = fileTable.searchFile(fileName);
-
+        
         List<String> tempList = fileTable.searchMyFileList(fileName);
         if (tempList != null) {
             tempMap = new HashMap<>();
@@ -195,5 +197,51 @@ public class Client extends RequestHandler {
             msgDecoder.DecodeMessage(s, incomingPacket.getAddress().getHostAddress(), incomingPacket.getPort());
         }
     }
-
+    
+    public void ping() throws Exception {
+        DatagramSocket pingSocket = new DatagramSocket();
+        List<NodeResource> neighbourList = routingTable.getNodeList();
+        
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                while (true) {
+                    for (int i = 0; i < neighbourList.size(); i++) {
+                        try {
+                            String ip = neighbourList.get(i).getIp();
+                            int port = neighbourList.get(i).getPort();
+                            String pinMessage = protocol.pingRequest(RequestHandler.clientIP, pingSocket.getLocalPort());
+                            DatagramPacket pingPacket = new DatagramPacket(pinMessage.getBytes(), pinMessage.getBytes().length,
+                                    InetAddress.getByName(ip), port);
+                            pingSocket.send(pingPacket);
+                            pingSocket.setSoTimeout(2000);
+                            
+                            byte[] buffer = new byte[65536];
+                            pingPacket = new DatagramPacket(buffer, buffer.length);
+                            pingSocket.receive(pingPacket);
+                            
+                            String pingResponse = new String(pingPacket.getData(), 0, pingPacket.getLength());
+                            if (pingResponse.contains("PINGOK") && port == pingPacket.getPort()
+                                    && pingPacket.getAddress().getHostAddress().equals(ip)) {
+                                System.out.println("Success - Neightbour " + ip + ":" + port + " is alive");
+                            }
+                            
+                        } catch (SocketTimeoutException ex) {
+                            neighbourList.remove(i);
+                            updateRoutingTable(routingTable, mainWindow);
+                        } catch (CommunicationProtocol.invalidMessageLengthException | UnknownHostException ex) {
+                            Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
+                        } catch (IOException ex) {
+                            Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
+                        }
+                    }
+                    try {
+                        Thread.sleep(10000);
+                    } catch (InterruptedException ex) {
+                        Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
+                    }
+                }
+            }
+        }).start();
+    }
 }

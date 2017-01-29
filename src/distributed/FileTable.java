@@ -28,7 +28,7 @@ public class FileTable {
     private FileTable() {
     }
 
-    public void addFile(String fileName, NodeResource node) {
+    public synchronized void addFile(String fileName, NodeResource node) {
         List<NodeResource> temp;
         temp = this.fileMap.get(fileName);
         if (temp != null) {

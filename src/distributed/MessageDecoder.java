@@ -15,7 +15,7 @@ import java.util.Map;
  * @author lahiru
  */
 public class MessageDecoder extends RequestHandler {
-
+    
     private String receivedIp;
     private int receivedPort;
     private final RoutingTable table;
@@ -24,7 +24,7 @@ public class MessageDecoder extends RequestHandler {
     long StartTime = 0l;
     long EndTime = 0l;
     FileTable fileTable;
-
+    
     public MessageDecoder(ControlPanel mainWindow) {
         super(mainWindow);
         table = RoutingTable.getInstance();
@@ -47,7 +47,7 @@ public class MessageDecoder extends RequestHandler {
             this.receivedPort = receivedPort;
             pp.incfMsgCount();
         }
-
+        
         if (msg.contains("REGOK")) {
             registerResponse(msg);
         } else if (msg.contains("UNROK")) {
@@ -64,6 +64,8 @@ public class MessageDecoder extends RequestHandler {
             handleLeaveRequest(msg);
         } else if (msg.contains("SER")) {
             handleSearchRequest(msg);
+        } else if (msg.contains("PING")) {
+            handlePingResponse(msg);
         }
     }
 
@@ -75,7 +77,7 @@ public class MessageDecoder extends RequestHandler {
     private void registerResponse(String message) {
         String buffer[] = message.split(" ");
         int neighboursCount = Integer.parseInt(buffer[2]);
-
+        
         if (neighboursCount > 0 && neighboursCount <= DistributedConstants.numberOfneighbours) {
             for (int i = 0; i < neighboursCount; i++) {
                 table.addNeighBour(new NodeResource(buffer[3 + 2 * i], Integer.parseInt(buffer[4 + 2 * i])));
@@ -161,7 +163,7 @@ public class MessageDecoder extends RequestHandler {
                 mainWindow.getDisplaySearchResult().append(buffer[6 + i] + " ==> " + fileHostedNodeIP + ":" + fileHostedNodePort + "\n");
             }
         }
-
+        
     }
 
     /**
@@ -172,12 +174,12 @@ public class MessageDecoder extends RequestHandler {
      * @throws Exception
      */
     private void handleJoinRequest(String message) throws Exception {
-
+        
         String buffer[] = message.split(" ");
         String ipOfRequestedNode = buffer[2];
         String responseMessage;
         int portOfRequestedNode = Integer.parseInt(buffer[3]);
-
+        
         if (ipOfRequestedNode.equals(this.receivedIp) && this.receivedPort == portOfRequestedNode) {
             this.table.addNeighBour(new NodeResource(ipOfRequestedNode, portOfRequestedNode));
             updateRoutingTable(table, mainWindow);
@@ -200,7 +202,7 @@ public class MessageDecoder extends RequestHandler {
         String ipOfRequestedNode = buffer[2];
         String responseMessage;
         int portOfRequestedNode = Integer.parseInt(buffer[3]);
-
+        
         if (ipOfRequestedNode.equals(this.receivedIp) && this.receivedPort == portOfRequestedNode) {
             this.table.removeNeighbour(new NodeResource(ipOfRequestedNode, portOfRequestedNode));
             updateRoutingTable(table, mainWindow);
@@ -208,7 +210,7 @@ public class MessageDecoder extends RequestHandler {
         } else {
             responseMessage = protocol.leaveResponse(9999);
         }
-
+        
         SendMessage(responseMessage, ipOfRequestedNode, portOfRequestedNode);
     }
 
@@ -230,38 +232,38 @@ public class MessageDecoder extends RequestHandler {
         int hopCount = Integer.parseInt(buffer_1[buffer_1.length - 1]);
         String fileList = "";
         List<String> list;
-        Map<String, List<NodeResource>> tempMap;
+        
         if (hopCount > 0) {
             hopCount--;
 //            String[] keywords = fileName.split("_");
-            tempMap = fileTable.searchFile(fileName);
-            for (int i = 0; i < keywords.length; i++) {
-                list = table.getFileMap().get(keywords[i]);
-                for (int j = 0; j < list.size(); j++) {
-                    String tempFileName = list.get(i);
-                    if (!fileList.contains(tempFileName)) {
-                        fileList += tempFileName + " ";
-                        fileCount++;
-                    }
+            list = fileTable.searchMyFileList(fileName);
+            for (int j = 0; j < list.size(); j++) {
+                String tempFileName = list.get(j);
+                if (!fileList.contains(tempFileName)) {
+                    fileList += tempFileName + " ";
+                    fileCount++;
                 }
             }
-
+            
             String fileRequestMsg = protocol.searchFile(ipOfRequestedNode, portOfRequestedNode, hopCount, fileName);
-            Iterator<String> iterator = table.getNeighbouringTable().keySet().iterator();
-            String tempKey;
-            while (iterator.hasNext()) {
-                tempKey = iterator.next();
-                if (table.getNeighbouringTable().get(tempKey).equals(DistributedConstants.connected)
-                        && !tempKey.equals(this.receivedIp + ":" + this.receivedPort)) {
-                    String[] temp = tempKey.split(":");
-                    SendMessage(fileRequestMsg, temp[0], Integer.parseInt(temp[1]));
-                }
+            List<NodeResource> nodeList = table.getNodeList();
+            for (int i = 0; i < nodeList.size(); i++) {
+                SendMessage(fileRequestMsg, nodeList.get(i).getIp(), nodeList.get(i).getPort());
             }
         }
-
+        
         if (fileList.length() > 0) {
             String searchResponse = protocol.searchResponse(fileCount, RequestHandler.clientIP, RequestHandler.socket.getLocalPort(), hopCount, fileList);
             SendMessage(searchResponse, ipOfRequestedNode, portOfRequestedNode);
         }
+    }
+    
+    private void handlePingResponse(String msg) throws CommunicationProtocol.invalidMessageLengthException, Exception {
+        String buffer[] = msg.split(" ");
+        String ip = buffer[2];
+        int port = Integer.parseInt(buffer[3]);
+        
+        String pingResponse = protocol.pingResponse(0);
+        SendMessage(pingResponse, ip, port);
     }
 }
